@@ -185,6 +185,12 @@ if FOUND_TORCH:
             Returns:
                 The node in the ONNX graph representing the output of this operation.
             """
+            # When None is passed as channel_axis, the op has no attribute of channel_axis,
+            # which creates conflict with the onnxruntime function. For this reason, if we quantize
+            # per-tensor and channel_axis is None, we set it to 0.
+            if not per_channel and channel_axis is None:
+                channel_axis = 0
+
             return g.op(
                 f"{ONNX_CUSTOM_OP_DOMAIN}::WeightsSymmetricQuantizer",
                 input_tensor,
@@ -209,11 +215,10 @@ else:
 
 if FOUND_ONNXRUNTIME_EXTENSIONS:
     from onnxruntime_extensions import PyCustomOpDef, onnx_op
-    def quantize_sym_weights_numpy(input_tensor: np.ndarray,
-                                   num_bits: int,
-                                   threshold: np.ndarray,
-                                   per_channel: int,
-                                   channel_axis: int=None):
+
+    def quantize_sym_weights_numpy(
+        input_tensor: np.ndarray, num_bits: int, threshold: np.ndarray, per_channel: int, channel_axis: int = None
+    ):
         """
         Quantizes the input tensor symmetrically using numpy.
 
